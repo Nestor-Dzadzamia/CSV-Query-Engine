@@ -1,0 +1,22 @@
+[project]
+name = "csv-query-engine"
+version = "0.1.0"
+description = "A reusable Python library for querying CSV data with a simple, composable API."
+readme = "README.md"
+authors = [
+    { name = "Nestor-Dzadzamia", email = "ndzad22@freeuni.edu.ge" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+csv-query-engine = "csv_query_engine:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

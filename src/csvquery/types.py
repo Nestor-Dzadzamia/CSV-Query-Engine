@@ -1,0 +1,1 @@
+Row = dict[str, str]

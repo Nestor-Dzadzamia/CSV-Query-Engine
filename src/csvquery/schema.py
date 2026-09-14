@@ -1,7 +1,7 @@
 import csv
 from enum import Enum
 from pathlib import Path
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 
 NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
 NOT_NUMBERS = {"inf", "-inf", "+inf", "infinity", "-infinity", "+infinity", "nan", "-nan", "+nan"}
@@ -88,7 +88,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
         ]
 
         for row_number, record in enumerate(records, start=1):  # romeli line ar varga gasagebad
-            if len(record) != len(expected_data_types.keys()):  # cell ebis raodenoba unda emtxveodes columnebis raodenobas
+            if len(record) != width:  # cell ebis raodenoba unda emtxveodes columnebis raodenobas
                 raise ValueError(f"Expected {len(expected_data_types.keys())} cells, got {len(record)}")
 
             for index,  column_name, expected_data_type in checks:
@@ -106,13 +106,16 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
 
 def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
     expected_data_types = get_data_types(files[0])
-    for file in files:
-        validate_file_schema(file, expected_data_types)
+
+    process_args = [(file, expected_data_types) for file in files]
+
+    with Pool(processes=min(cpu_count(), len(files))) as pool:
+        pool.starmap(validate_file_schema, process_args)
+
     return expected_data_types
 
 
 def retrieve_validate_files(path: str) -> list[Path]:
-    """return the CSV files at `path`, which may be one file or a directory"""
     target = Path(path)
 
     if not target.exists():

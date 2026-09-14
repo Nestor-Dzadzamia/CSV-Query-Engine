@@ -7,8 +7,5 @@ from csvquery.types import Row
 
 
 class Operation(ABC):
-    """One step in a query pipeline: takes a stream of rows, returns a stream of rows."""
-
     @abstractmethod
-    def apply(self, rows: Iterator[Row]) -> Iterator[Row]:
-        """Transform the incoming rows."""
+    def apply(self, rows: Iterator[Row]) -> Iterator[Row]: ...

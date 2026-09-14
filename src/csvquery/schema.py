@@ -138,13 +138,3 @@ def retrieve_validate_files(path: str) -> list[Path]:
     if not files:
         raise ValueError(f"the directory {path!r} contains no .csv files")
     return files
-
-def count_rows(file: Path) -> int:
-    count = 0
-    with open(file, newline="", encoding="utf-8-sig") as csv_file:
-        records = csv.reader(csv_file)
-        next(records, None) # header ar mainteresebs
-
-        for _ in records:
-            count += 1
-    return count

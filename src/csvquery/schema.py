@@ -1,12 +1,10 @@
 import csv
-import re
-from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from multiprocessing import Pool
 
 NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
-
+NOT_NUMBERS = {"inf", "-inf", "+inf", "infinity", "-infinity", "+infinity", "nan", "-nan", "+nan"}
 
 class ColumnType(Enum):
     INTEGER = "integer"
@@ -26,12 +24,12 @@ def get_cell_type(raw_cell: str) -> ColumnType | None:
     except ValueError:
         ...
 
-    try:
-        if not re.match(r"[+-]?\s*\b(?:inf(?:inity)?|INF(?:INITY)?|Inf(?:inity)?)\b", cell, re.IGNORECASE) and cell != "nan": # es prosta -inf inf filtria, regex AIit davwere
+    if cell.lower() not in NOT_NUMBERS:
+        try:
             float(cell)
             return ColumnType.FLOAT
-    except ValueError:
-        ...
+        except ValueError:
+            pass
     return ColumnType.STRING
 
 
@@ -82,17 +80,27 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                     f"column mismatch, should be {expected_column}, got {actual_column} in {file}"
                 )
 
-        for row_number, record in enumerate(records, start=1): # romeli line ar varga gasagebad
-            for column_name, expected_type, raw_cell in zip(expected_data_types.keys(), expected_data_types.values(), record):
+        width = len(expected_data_types)
+        checks = [
+            (index, column, expected_data_type)
+            for index, (column, expected_data_type) in enumerate(expected_data_types.items())
+            if expected_data_type is not ColumnType.STRING
+        ]
+
+        for row_number, record in enumerate(records, start=1):  # romeli line ar varga gasagebad
+            if len(record) != len(expected_data_types.keys()):  # cell ebis raodenoba unda emtxveodes columnebis raodenobas
+                raise ValueError(f"Expected {len(expected_data_types.keys())} cells, got {len(record)}")
+
+            for index,  column_name, expected_data_type in checks:
+                raw_cell = record[index]
                 data_type_of_raw_cell = get_cell_type(raw_cell)
 
                 if data_type_of_raw_cell is None:
                     continue
 
-                if data_type_of_raw_cell != expected_type:
-                    # print(record)
+                if data_type_of_raw_cell != expected_data_type:
                     raise ValueError(
-                        f" Error in {file} at row {row_number} on column {column_name} cell - {raw_cell}: expected {expected_type.value} but got {data_type_of_raw_cell.value}"
+                        f"{file} row {row_number}, column {column_name}: expected {expected_data_type.value} but got {data_type_of_raw_cell.value}"
                     )
 
 
@@ -128,21 +136,6 @@ def retrieve_validate_files(path: str) -> list[Path]:
         raise ValueError(f"the directory {path!r} contains no .csv files")
     return files
 
-# -------------------------------------------------------------- multiprocessing aqedan
-
-class ProcessState(Enum):
-    CREATED = "CREATED"
-    PENDING = "PENDING"
-    SUCCESS = "SUCCESS"
-    FAIL = "FAIL"
-
-@dataclass
-class Process:
-    id: int
-    start: int
-    end: int
-    ProcessState: ProcessState
-
 def count_rows(file: Path) -> int:
     count = 0
     with open(file, newline="", encoding="utf-8-sig") as csv_file:
@@ -152,24 +145,3 @@ def count_rows(file: Path) -> int:
         for _ in records:
             count += 1
     return count
-
-def processing(process_id: int) -> None:
-    print(f"processing {process_id}")
-
-def multiprocess_validation(file: Path, num_processes: int = 10) -> None:
-    total_rows_in_file = count_rows(file)
-    chunk_size_per_process = total_rows_in_file // num_processes
-    last_chunk = total_rows_in_file % num_processes
-
-    processes: list[Process] = []
-    for i in range(num_processes):
-        start = chunk_size_per_process * i
-        end = last_chunk if i == num_processes - 1 else (i + 1) * chunk_size_per_process
-
-        processes.append(
-            Process(id=i, start=start, end=end, ProcessState=ProcessState.CREATED)
-        )
-        start += chunk_size_per_process
-        end+= chunk_size_per_process
-
-    # dasamtavrebeli

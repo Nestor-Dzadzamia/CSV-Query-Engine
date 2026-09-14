@@ -5,7 +5,6 @@ from collections.abc import Iterator
 from csvquery.operations.operation import Operation
 from csvquery.types import Row
 
-
 class Select(Operation):
     def __init__(self, *columns: str) -> None:
         self._columns = columns

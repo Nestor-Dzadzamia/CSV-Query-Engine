@@ -1,7 +1,9 @@
 import csv
 import re
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from multiprocessing import Pool
 
 NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
 
@@ -125,3 +127,49 @@ def retrieve_validate_files(path: str) -> list[Path]:
     if not files:
         raise ValueError(f"the directory {path!r} contains no .csv files")
     return files
+
+# -------------------------------------------------------------- multiprocessing aqedan
+
+class ProcessState(Enum):
+    CREATED = "CREATED"
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAIL = "FAIL"
+
+@dataclass
+class Process:
+    id: int
+    start: int
+    end: int
+    ProcessState: ProcessState
+
+def count_rows(file: Path) -> int:
+    count = 0
+    with open(file, newline="", encoding="utf-8-sig") as csv_file:
+        records = csv.reader(csv_file)
+        next(records, None) # header ar mainteresebs
+
+        for _ in records:
+            count += 1
+    return count
+
+def processing(process_id: int) -> None:
+    print(f"processing {process_id}")
+
+def multiprocess_validation(file: Path, num_processes: int = 10) -> None:
+    total_rows_in_file = count_rows(file)
+    chunk_size_per_process = total_rows_in_file // num_processes
+    last_chunk = total_rows_in_file % num_processes
+
+    processes: list[Process] = []
+    for i in range(num_processes):
+        start = chunk_size_per_process * i
+        end = last_chunk if i == num_processes - 1 else (i + 1) * chunk_size_per_process
+
+        processes.append(
+            Process(id=i, start=start, end=end, ProcessState=ProcessState.CREATED)
+        )
+        start += chunk_size_per_process
+        end+= chunk_size_per_process
+
+    # dasamtavrebeli

@@ -1,4 +1,5 @@
 import csv
+import re
 from enum import Enum
 from pathlib import Path
 
@@ -24,8 +25,9 @@ def get_cell_type(raw_cell: str) -> ColumnType | None:
         ...
 
     try:
-        float(cell)
-        return ColumnType.FLOAT
+        if not re.match(r"[+-]?\s*\b(?:inf(?:inity)?|INF(?:INITY)?|Inf(?:inity)?)\b", cell, re.IGNORECASE) and cell != "nan": # es prosta -inf inf filtria, regex AIit davwere
+            float(cell)
+            return ColumnType.FLOAT
     except ValueError:
         ...
     return ColumnType.STRING
@@ -78,16 +80,17 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                     f"column mismatch, should be {expected_column}, got {actual_column} in {file}"
                 )
 
-        for row_number, record in enumerate(records, start=2): # romeli line ar varga gasagebad
-            for expected_type, raw_cell in zip(expected_data_types.values(), record):
+        for row_number, record in enumerate(records, start=1): # romeli line ar varga gasagebad
+            for column_name, expected_type, raw_cell in zip(expected_data_types.keys(), expected_data_types.values(), record):
                 data_type_of_raw_cell = get_cell_type(raw_cell)
 
                 if data_type_of_raw_cell is None:
                     continue
 
                 if data_type_of_raw_cell != expected_type:
+                    # print(record)
                     raise ValueError(
-                        f" Error in {file} at row {row_number}: expected {expected_type.value} but got {data_type_of_raw_cell.value}"
+                        f" Error in {file} at row {row_number} on column {column_name} cell - {raw_cell}: expected {expected_type.value} but got {data_type_of_raw_cell.value}"
                     )
 
 

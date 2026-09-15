@@ -12,6 +12,8 @@ from csvquery import CSVData # type: ignore
 # result.save("output/result.csv")
 
 if __name__ == "__main__":
-    print(datetime.datetime.now())
+    print("Starting Schema Validation")
+    start = datetime.datetime.now()
     data = CSVData("data/")
-    print(datetime.datetime.now())
+    end = datetime.datetime.now()
+    print(f"Schema Validation Complete in {(end - start).total_seconds()} seconds")

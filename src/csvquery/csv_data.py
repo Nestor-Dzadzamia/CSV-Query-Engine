@@ -5,9 +5,10 @@ from csvquery.operations.limit import Limit
 from csvquery.operations.operation import Operation
 from csvquery.operations.select import Select
 from csvquery.operations.sort import Sort
-from csvquery.reader_writer.reader import read_rows
+from csvquery.io_handlers.reader import read_rows
 
-from csvquery.schema_validation.schema import retrieve_validate_files, validate_schema
+from csvquery.schema.files import retrieve_validate_files
+from csvquery.schema.validation import validate_schema
 from csvquery.types import Row
 
 class CSVData:

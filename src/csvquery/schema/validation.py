@@ -1,72 +1,13 @@
 import csv
-from enum import Enum
-from pathlib import Path
 from multiprocessing import Pool, cpu_count
+from pathlib import Path
+
 import pandas as pd
 
-NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
-NOT_NUMBERS = {"inf", "-inf", "+inf", "infinity", "-infinity", "+infinity", "nan", "-nan", "+nan"}
-BOOLEANS = {"true", "false", "TRUE", "FALSE"}
+from csvquery.schema.inference import get_data_types
+from csvquery.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
+
 CHUNK_SIZE = 1_000_000
-
-class ColumnType(Enum):
-    INTEGER = "integer"
-    FLOAT = "float"
-    STRING = "string"
-    BOOLEAN = "boolean"
-
-
-def get_cell_type(raw_cell: str) -> ColumnType | None:
-    cell = raw_cell.strip()
-
-    if cell in BOOLEANS:
-        return ColumnType.BOOLEAN
-
-    if cell in NULL_TYPES:
-        return None
-
-    # satitaod cast (check)
-    try:
-        int(cell)
-        return ColumnType.INTEGER
-    except ValueError:
-        ...
-
-    if cell.lower() not in NOT_NUMBERS:
-        try:
-            float(cell)
-            return ColumnType.FLOAT
-        except ValueError:
-            pass
-    return ColumnType.STRING
-
-
-def get_data_types(file: Path) -> dict[str, ColumnType]:
-    with open(file, newline="", encoding="utf-8-sig") as csv_file:
-        records = csv.reader(csv_file)
-        header = next(records, None)
-        if header is None:
-            raise ValueError("CSV file is empty")
-
-        header = [column.strip() for column in header]
-        types: dict[str, ColumnType | None] = {  # napovni type ebistvis
-            column: None for column in header
-        }
-        unknown_columns = set(header)
-
-        for record in records:
-            for column, cell in zip(header, record):  # column : cell gadayola
-                if column in unknown_columns:
-                    cell_type = get_cell_type(cell)
-                    if cell_type is not None:
-                        types[column] = cell_type
-                        unknown_columns.remove(column)
-
-            if not unknown_columns:  # yvela svets aqvs type, anu unkown columns set carielia
-                break
-
-        # tu mteli sveti sul null ebia mashin defaultat String type
-        return {column: cell_type or ColumnType.STRING for column, cell_type in types.items()}
 
 
 def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType]) -> None:
@@ -137,28 +78,3 @@ def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
         pool.starmap(validate_file_schema, process_args)
 
     return expected_data_types
-
-
-def retrieve_validate_files(path: str) -> list[Path]:
-    target = Path(path)
-
-    if not target.exists():
-        raise FileNotFoundError(f"The path {path!r} does not exist")
-
-    if target.is_file():
-        if target.suffix != ".csv":
-            raise ValueError(f"not a CSV file: {path!r}")
-        return [target]
-
-    files = []
-
-    for file in target.iterdir():
-        if file.suffix != ".csv":
-            continue
-        files.append(file)
-
-    files = sorted(files, key=lambda f: f.name) # aq vsortav, filesystemma sheileba aradeterministulad waikitxos
-
-    if not files:
-        raise ValueError(f"the directory {path!r} contains no .csv files")
-    return files

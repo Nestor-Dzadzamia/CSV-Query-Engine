@@ -2,18 +2,26 @@ import csv
 from enum import Enum
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
+import pandas as pd
 
 NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
 NOT_NUMBERS = {"inf", "-inf", "+inf", "infinity", "-infinity", "+infinity", "nan", "-nan", "+nan"}
+BOOLEANS = {"true", "false", "TRUE", "FALSE"}
+CHUNK_SIZE = 1_000_000
 
 class ColumnType(Enum):
     INTEGER = "integer"
     FLOAT = "float"
     STRING = "string"
+    BOOLEAN = "boolean"
 
 
 def get_cell_type(raw_cell: str) -> ColumnType | None:
     cell = raw_cell.strip()
+
+    if cell in BOOLEANS:
+        return ColumnType.BOOLEAN
+
     if cell in NULL_TYPES:
         return None
 
@@ -63,46 +71,62 @@ def get_data_types(file: Path) -> dict[str, ColumnType]:
 
 def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType]) -> None:
     with open(file, newline="", encoding="utf-8-sig") as csv_file:
-        records = csv.reader(csv_file)
-        headers = next(records, None)
+        headers = next(csv.reader(csv_file), None)
 
-        if headers is None:
-            raise ValueError(f"CSV file is empty {file}")
+    if headers is None:
+        raise ValueError(f"CSV file is empty {file}")
 
-        headers = [column.strip() for column in headers]
+    headers = [column.strip() for column in headers]
+    if headers != list(expected_data_types):
+        raise ValueError(f"{file}: columns {headers} do not match {list(expected_data_types)}")
 
-        if len(headers) != len(expected_data_types.keys()):
-            raise ValueError(f"Expected {len(expected_data_types)} columns, got {len(headers)}")
+    # mxolod numeric columnebis validurobas vcheqav, string svetshi tu ricxvia magalitad 101 ganvixilav rogorc strigns
+    numeric_columns = [column for column, data_type in expected_data_types.items() if data_type in (ColumnType.INTEGER, ColumnType.FLOAT, ColumnType.INTEGER)]
+    boolean_columns = [column for column, data_type in expected_data_types.items() if data_type is ColumnType.BOOLEAN]
+    checked_columns = numeric_columns + boolean_columns
+    if not checked_columns:
+        return
 
-        for expected_column, actual_column in zip(expected_data_types.keys(), headers):
-            if expected_column != actual_column:
-                raise ValueError(
-                    f"column mismatch, should be {expected_column}, got {actual_column} in {file}"
-                )
+    try:
+        chunks = pd.read_csv( # aq chunk_size is morgeba sheileba yvelaze swafi ro iyos
+            file,
+            usecols=checked_columns,
+            dtype={column: str for column in boolean_columns},
+            chunksize=CHUNK_SIZE,
+            na_values=list(NULL_TYPES),
+            keep_default_na=False,
+            encoding="utf-8-sig",
+        ) # sia pandas chunk_size is xela data_frameebis
+        for chunk in chunks:
+            for column in numeric_columns:
+                values = chunk[column].dropna() # am chunkis columnebis titoeuli svetis mnishvnelobebi
+                expected_data_type = expected_data_types[column]
 
-        width = len(expected_data_types)
-        checks = [
-            (index, column, expected_data_type)
-            for index, (column, expected_data_type) in enumerate(expected_data_types.items())
-            if expected_data_type is not ColumnType.STRING
-        ]
+                if not pd.api.types.is_numeric_dtype(values):
+                    for row, cell in values.items():
+                        if get_cell_type(cell) is ColumnType.STRING:
+                            raise ValueError(
+                                f"{file} row {row + 1}: column {column} expected {expected_data_type.value} but got {cell}"
+                            )
 
-        for row_number, record in enumerate(records, start=1):  # romeli line ar varga gasagebad
-            if len(record) != width:  # cell ebis raodenoba unda emtxveodes columnebis raodenobas
-                raise ValueError(f"Expected {len(expected_data_types.keys())} cells, got {len(record)}")
-
-            for index,  column_name, expected_data_type in checks:
-                raw_cell = record[index]
-                data_type_of_raw_cell = get_cell_type(raw_cell)
-
-                if data_type_of_raw_cell is None:
-                    continue
-
-                if data_type_of_raw_cell != expected_data_type:
+                if expected_data_type is ColumnType.INTEGER:
+                    bad = values % 1 != 0 # anu integers velodebit da float weria
+                    if bad.any(): # tu romelime value truea
+                        row = bad.idxmax() # pirveli trues indexi
+                        raise ValueError(
+                            f"{file} row {row + 1}, column {column}: expected integer but got {values[row]}"
+                        )
+            for column in boolean_columns:
+                values = chunk[column].dropna()
+                bad = ~values.isin(BOOLEANS) # es ~ prosta flipavs anu not ivitaa
+                if bad.any():
+                    row = bad.idxmax()
                     raise ValueError(
-                        f"{file} row {row_number}, column {column_name}: expected {expected_data_type.value} but got {data_type_of_raw_cell.value}"
+                        f"{file} row {row + 1}, column {column}: expected boolean got {values[row]}"
                     )
 
+    except pd.errors.ParserError as error:
+        raise ValueError(f"{file}: {error}") from None
 
 def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
     expected_data_types = get_data_types(files[0])

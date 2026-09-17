@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import cast
 
 from csvquery.schema.inference import get_data_types
-from csvquery.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
+from csvquery.schema.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
 
 CHUNK_SIZE = 1_000_000
 

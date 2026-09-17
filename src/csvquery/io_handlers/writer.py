@@ -2,7 +2,7 @@ import csv
 from typing import Iterable
 from operator import itemgetter
 
-from csvquery.types import Row
+from csvquery.schema.types import Row
 
 
 def write_rows(path: str, rows: Iterable[Row]) -> None:

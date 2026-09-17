@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from csvquery.types import ColumnType, get_cell_type
+from csvquery.schema.types import ColumnType, get_cell_type
 
 
 def get_data_types(file: Path) -> dict[str, ColumnType]:

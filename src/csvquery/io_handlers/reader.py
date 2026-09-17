@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterator
 from pathlib import Path
-from csvquery.types import Row
+from csvquery.schema.types import Row
 
 
 def read_rows(files: list[Path], header: list[str]) -> Iterator[Row]:

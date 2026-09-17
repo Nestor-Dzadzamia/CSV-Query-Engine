@@ -11,7 +11,7 @@ from csvquery.io_handlers.reader import read_rows
 
 from csvquery.schema.files import retrieve_validate_files
 from csvquery.schema.validation import validate_schema
-from csvquery.types import Row
+from csvquery.schema.types import Row
 
 class CSVData:
     def __init__(self, path: str) -> None:
@@ -21,7 +21,7 @@ class CSVData:
 
     def filter(self, expression: str) -> Self:
         # validate_expression(expression)
-        self._operations.append(Filter(expression))
+        self._operations.append(Filter(expression, self._schema))
         return self
 
     def select(self, *columns: str) -> Self:
@@ -31,7 +31,7 @@ class CSVData:
 
     def sort(self, *columns: str, descending: bool = False) -> Self:
         self._validate_columns(columns, "sort")
-        self._operations.append(Sort(*columns, descending=descending))
+        self._operations.append(Sort(*columns,  schema=self._schema, descending=descending))
         return self
 
     def limit(self, n: int) -> Self:

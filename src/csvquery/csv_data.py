@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import Self, Iterator
+
+from csvquery.io_handlers.writer import write_rows
 from csvquery.operations.filter import Filter
 from csvquery.operations.limit import Limit
 from csvquery.operations.operation import Operation
@@ -13,8 +15,6 @@ from csvquery.types import Row
 
 class CSVData:
     def __init__(self, path: str) -> None:
-        self._open_path = path
-        self._save_path = "default.csv"
         self._files = retrieve_validate_files(path)
         self._schema = validate_schema(self._files)
         self._operations: list[Operation] = []
@@ -25,12 +25,12 @@ class CSVData:
         return self
 
     def select(self, *columns: str) -> Self:
-        # validate_columns(columns)
+        self._validate_columns(columns, "select")
         self._operations.append(Select(*columns))
         return self
 
     def sort(self, *columns: str, descending: bool = False) -> Self:
-        # validate_columns(columns)
+        self._validate_columns(columns, "sort")
         self._operations.append(Sort(*columns, descending=descending))
         return self
 
@@ -39,7 +39,8 @@ class CSVData:
         return self
 
     def save(self, path: str) -> None:
-        self._save_path = path
+        rows = self._execute()
+        write_rows(path, rows)
 
     def _execute(self) -> Iterator[Row]:
         rows = read_rows(self._files, list(self._schema.keys()))
@@ -49,3 +50,8 @@ class CSVData:
 
     def __iter__(self) -> Iterator[Row]:
         return self._execute()
+
+    def _validate_columns(self, columns: tuple[str, ...], operation: str) -> None:
+        for column in columns:
+            if column not in self._schema:
+                raise ValueError(f"Invalid column '{column}' on operation '{operation}'")

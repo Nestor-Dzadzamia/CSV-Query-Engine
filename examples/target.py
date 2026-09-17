@@ -17,3 +17,13 @@ if __name__ == "__main__":
     data = CSVData("data/")
     end = datetime.datetime.now()
     print(f"Schema Validation Complete in {(end - start).total_seconds()} seconds")
+
+    print("Query execution started")
+    start = datetime.datetime.now()
+    result = (
+        data.select("event_time","event_type","product_id","category_id","category_code","brand","price","user_id","user_session")
+    )
+    result.save("output.csv")
+    result._execute()
+    end = datetime.datetime.now()
+    print(f"Query execution completed in {(end - start).total_seconds()} seconds")

@@ -1,8 +1,8 @@
 import csv
+import pandas as pd
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-
-import pandas as pd
+from typing import cast
 
 from csvquery.schema.inference import get_data_types
 from csvquery.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
@@ -47,13 +47,13 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                     for row, cell in values.items():
                         if get_cell_type(cell) is ColumnType.STRING:
                             raise ValueError(
-                                f"{file} row {row + 1}: column {column} expected {expected_data_type.value} but got {cell}"
+                                f"{file} row {cast(int, row) + 1}: column {column} expected {expected_data_type.value} but got {cell}"
                             )
 
                 if expected_data_type is ColumnType.INTEGER:
                     bad = values % 1 != 0 # anu integers velodebit da float weria
                     if bad.any(): # tu romelime value truea
-                        row = bad.idxmax() # pirveli trues indexi
+                        row = cast(int, bad.idxmax()) # pirveli trues indexi
                         raise ValueError(
                             f"{file} row {row + 1}, column {column}: expected integer but got {values[row]}"
                         )
@@ -61,7 +61,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                 values = chunk[column].dropna()
                 bad = ~values.isin(BOOLEANS) # es ~ prosta flipavs anu not ivitaa
                 if bad.any():
-                    row = bad.idxmax()
+                    row = cast(int,bad.idxmax())
                     raise ValueError(
                         f"{file} row {row + 1}, column {column}: expected boolean got {values[row]}"
                     )

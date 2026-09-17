@@ -18,4 +18,5 @@ htmlcov/
 **/data/*
 !**/data/README.md
 output/
+*.csv
 

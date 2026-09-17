@@ -33,7 +33,7 @@ if __name__ == "__main__":
             "user_session",
         )
         .filter("brand == samsung")
-        .limit(10)
+        .limit(10_000_000)
         .sort("price")
     )
     result.save("output.csv")

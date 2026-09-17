@@ -10,7 +10,7 @@ from csvquery.operations.sort import Sort
 from csvquery.io_handlers.reader import read_rows
 
 from csvquery.schema.files import retrieve_validate_files
-from csvquery.schema.validation import validate_schema
+from csvquery.schema.validation import validate_schema, validate_columns
 from csvquery.schema.types import Row
 
 class CSVData:
@@ -25,12 +25,12 @@ class CSVData:
         return self
 
     def select(self, *columns: str) -> Self:
-        self._validate_columns(columns, "select")
+        validate_columns(self._schema, columns, "select")
         self._operations.append(Select(*columns))
         return self
 
     def sort(self, *columns: str, descending: bool = False) -> Self:
-        self._validate_columns(columns, "sort")
+        validate_columns(self._schema, columns, "sort")
         self._operations.append(Sort(*columns,  schema=self._schema, descending=descending))
         return self
 
@@ -50,8 +50,3 @@ class CSVData:
 
     def __iter__(self) -> Iterator[Row]:
         return self._execute()
-
-    def _validate_columns(self, columns: tuple[str, ...], operation: str) -> None:
-        for column in columns:
-            if column not in self._schema:
-                raise ValueError(f"Invalid column '{column}' on operation '{operation}'")

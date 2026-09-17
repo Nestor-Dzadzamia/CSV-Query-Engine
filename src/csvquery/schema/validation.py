@@ -78,3 +78,8 @@ def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
         pool.starmap(validate_file_schema, process_args)
 
     return expected_data_types
+
+def validate_columns(schema: dict[str, ColumnType], columns: tuple[str, ...], operation: str) -> None:
+    for column in columns:
+        if column not in schema:
+            raise ValueError(f"Invalid column '{column}' on operation '{operation}'")

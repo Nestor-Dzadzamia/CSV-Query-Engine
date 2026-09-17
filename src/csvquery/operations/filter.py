@@ -4,6 +4,7 @@ import operator
 import re
 
 from collections.abc import Iterator, Callable
+from typing import Any
 
 from csvquery.operations.operation import Operation
 from csvquery.operations.types import cast
@@ -21,24 +22,30 @@ OPERATORS: dict[str, Callable] = {
 EXPRESSION = re.compile(r"^\s*(\w+)\s*(>=|<=|==|!=|>|<)\s*(.+?)\s*$")
 
 
+def _validate_expression(expression: str, schema: dict[str, ColumnType]) -> tuple[str | Any, str | Any, str | Any]:
+    match = EXPRESSION.match(expression)
+
+    if match is None:
+        raise ValueError(f"invalid filter '{expression}', create filter according to grammar - COLUMN OPERATOR VALUE")
+
+    column, operator, value = match.groups()
+
+    if column not in schema:
+        raise ValueError(f"invalid column '{column}' on operation 'filter'")
+
+    if value[0] == value[-1] and value[0] in ("'", '"'):
+        value = value[1:-1]
+
+    return column, operator, value
+
+
 class Filter(Operation):
     def __init__(self, expression: str, schema: dict[str, ColumnType]) -> None:
-        match = EXPRESSION.match(expression)
-
-        if match is None:
-            raise ValueError(f"invalid filter '{expression}', create filter according to grammar - COLUMN OPERATOR VALUE")
-
-        column, operator, value = match.groups()
-
-        if column not in schema:
-            raise ValueError(f"invalid column '{column}' on operation 'filter'")
-
-        if value[0] == value[-1] and value[0] in ("'", '"'):
-            value = value[1:-1]
+        column, compare_operator, value = _validate_expression(expression, schema)
 
         self._column = column
         self._type = schema[column]
-        self._compare_operator = OPERATORS[operator]
+        self._compare_operator = OPERATORS[compare_operator]
 
         try:
             self._value = cast(value, self._type)

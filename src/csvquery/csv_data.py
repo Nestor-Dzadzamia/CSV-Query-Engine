@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Self, Iterator
 
 from csvquery.io_handlers.writer import write_rows
+from csvquery.operations.count import Count
 from csvquery.operations.filter import Filter
 from csvquery.operations.limit import Limit
 from csvquery.operations.operation import Operation
@@ -40,6 +41,13 @@ class CSVData:
 
     def limit(self, n: int) -> Self:
         self._operations.append(Limit(n))
+        return self
+
+    def count(self, column: str = "*") -> Self:
+        if column != "*":
+            validate_columns(self._schema, (column,), "count")
+
+        self._operations.append(Count(column))
         return self
 
     @timed("query execution")

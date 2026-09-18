@@ -1,6 +1,7 @@
 from enum import Enum
 
 Row = dict[str, str]
+CellValue = int | float | bool | str | None
 
 NULL_TYPES = {"", "NA", "N/A", "NULL", "null"}
 NOT_NUMBERS = {"inf", "-inf", "+inf", "infinity", "-infinity", "+infinity", "nan", "-nan", "+nan"}

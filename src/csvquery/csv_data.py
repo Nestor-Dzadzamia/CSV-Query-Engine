@@ -40,7 +40,7 @@ class CSVData:
         self._operations.append(Sort(*columns,  schema=self._schema, descending=descending))
         return self
 
-    def limit(self, n: int) -> Self:
+    def limit(self, n: int) -> Self :
         self._operations.append(Limit(n))
         return self
 
@@ -49,6 +49,13 @@ class CSVData:
             validate_columns(self._schema, (column,), "count")
 
         self._operations.append(Count(column))
+        return self
+
+    def group_by(self, group_col: str, agg_col: str, agg_func: str = "sum") -> Self:
+
+        from csvquery.operations.group_by import GroupBy
+
+        self._operations.append(GroupBy(group_col, agg_col, agg_func))
         return self
 
     @timed("query execution")

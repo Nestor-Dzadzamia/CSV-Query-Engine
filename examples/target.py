@@ -1,6 +1,5 @@
-import datetime
-
-from csvquery import CSVData # type: ignore
+import logging
+from csvquery import CSVData
 
 # result = (
 #     data
@@ -11,15 +10,11 @@ from csvquery import CSVData # type: ignore
 # )
 # result.save("output/result.csv")
 
-if __name__ == "__main__":
-    print("Starting Schema Validation")
-    start = datetime.datetime.now()
-    data = CSVData("data/")
-    end = datetime.datetime.now()
-    print(f"Schema Validation Complete in {(end - start).total_seconds()} seconds")
 
-    print("Query execution started")
-    start = datetime.datetime.now()
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+    data = CSVData("data/")
     result = (
         data.select(
             "event_time",
@@ -37,5 +32,3 @@ if __name__ == "__main__":
         .sort("price")
     )
     result.save("output.csv")
-    end = datetime.datetime.now()
-    print(f"Query execution completed in {(end - start).total_seconds()} seconds")

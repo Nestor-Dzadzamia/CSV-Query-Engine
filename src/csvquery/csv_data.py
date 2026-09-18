@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Self, Iterator
 
 from csvquery.io_handlers.writer import write_rows
@@ -14,12 +13,11 @@ from csvquery.io_handlers.reader import read_rows
 from csvquery.schema.files import retrieve_validate_files
 from csvquery.schema.validation import validate_schema, validate_columns
 from csvquery.schema.types import Row
-from csvquery.util.timer import timer_schema_validation, timer_query_execution
+from csvquery.util.timer import timed
 
 
-@timer_schema_validation()
-@timer_query_execution()
 class CSVData:
+    @timed("schema validation")
     def __init__(self, path: str) -> None:
         self._files = retrieve_validate_files(path)
         self._schema = validate_schema(self._files)
@@ -44,6 +42,7 @@ class CSVData:
         self._operations.append(Limit(n))
         return self
 
+    @timed("query execution")
     def save(self, path: str) -> None:
         rows = self._execute()
         write_rows(path, rows)

@@ -1,11 +1,12 @@
 import csv
 from pathlib import Path
 
+from csvquery.config import PipelineConfig
 from csvquery.schema.types import ColumnType, get_cell_type
 
 
-def get_data_types(file: Path) -> dict[str, ColumnType]:
-    with open(file, newline="", encoding="utf-8-sig") as csv_file:
+def get_data_types(file: Path, config: PipelineConfig) -> dict[str, ColumnType]:
+    with open(file, newline="", encoding=config.encoding) as csv_file:
         records = csv.reader(csv_file)
         header = next(records, None)
         if header is None:

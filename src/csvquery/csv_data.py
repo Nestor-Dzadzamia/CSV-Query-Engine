@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Self, Iterator
 
+from csvquery.config import PipelineConfig
 from csvquery.io_handlers.writer import write_rows
 from csvquery.operations.count import Count
 from csvquery.operations.filter import Filter
@@ -19,13 +20,13 @@ from csvquery.util.timer import timed
 
 class CSVData:
     @timed("schema validation")
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, config: PipelineConfig | None = None) -> None:
+        self._config = PipelineConfig() if config is None else config
         self._files = retrieve_validate_files(path)
-        self._schema = validate_schema(self._files)
+        self._schema = validate_schema(self._files, self._config)
         self._operations: list[Operation] = []
 
     def filter(self, expression: str) -> Self:
-        # validate_expression(expression)
         self._operations.append(Filter(expression, self._schema))
         return self
 
@@ -53,10 +54,10 @@ class CSVData:
     @timed("query execution")
     def save(self, path: str) -> None:
         rows = self._execute()
-        write_rows(path, rows)
+        write_rows(path, rows, self._config)
 
     def _execute(self) -> Iterator[Row]:
-        rows = read_rows(self._files, list(self._schema.keys()))
+        rows = read_rows(self._files, list(self._schema.keys()), self._config)
         for operation in self._operations:
             rows = operation.apply(rows)
         return rows

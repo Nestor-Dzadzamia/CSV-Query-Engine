@@ -1,17 +1,16 @@
 import csv
+import pandas as pd
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
+from typing import cast
 
-import pandas as pd
-
+from csvquery.config import PipelineConfig
 from csvquery.schema.inference import get_data_types
-from csvquery.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
-
-CHUNK_SIZE = 1_000_000
+from csvquery.schema.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
 
 
-def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType]) -> None:
-    with open(file, newline="", encoding="utf-8-sig") as csv_file:
+def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType], config: PipelineConfig) -> None:
+    with open(file, newline="", encoding=config.encoding) as csv_file:
         headers = next(csv.reader(csv_file), None)
 
     if headers is None:
@@ -33,7 +32,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
             file,
             usecols=checked_columns,
             dtype={column: str for column in boolean_columns},
-            chunksize=CHUNK_SIZE,
+            chunksize=config.chunk_size,
             na_values=list(NULL_TYPES),
             keep_default_na=False,
             encoding="utf-8-sig",
@@ -47,13 +46,13 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                     for row, cell in values.items():
                         if get_cell_type(cell) is ColumnType.STRING:
                             raise ValueError(
-                                f"{file} row {row + 1}: column {column} expected {expected_data_type.value} but got {cell}"
+                                f"{file} row {cast(int, row) + 1}: column {column} expected {expected_data_type.value} but got {cell}"
                             )
 
                 if expected_data_type is ColumnType.INTEGER:
                     bad = values % 1 != 0 # anu integers velodebit da float weria
                     if bad.any(): # tu romelime value truea
-                        row = bad.idxmax() # pirveli trues indexi
+                        row = cast(int, bad.idxmax()) # pirveli trues indexi
                         raise ValueError(
                             f"{file} row {row + 1}, column {column}: expected integer but got {values[row]}"
                         )
@@ -61,7 +60,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
                 values = chunk[column].dropna()
                 bad = ~values.isin(BOOLEANS) # es ~ prosta flipavs anu not ivitaa
                 if bad.any():
-                    row = bad.idxmax()
+                    row = cast(int,bad.idxmax())
                     raise ValueError(
                         f"{file} row {row + 1}, column {column}: expected boolean got {values[row]}"
                     )
@@ -69,12 +68,17 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
     except pd.errors.ParserError as error:
         raise ValueError(f"{file}: {error}") from None
 
-def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
-    expected_data_types = get_data_types(files[0])
+def validate_schema(files: list[Path], config: PipelineConfig) -> dict[str, ColumnType]:
+    expected_data_types = get_data_types(files[0], config)
 
-    process_args = [(file, expected_data_types) for file in files]
+    process_args = [(file, expected_data_types, config) for file in files]
 
-    with Pool(processes=min(cpu_count(), len(files))) as pool:
+    with Pool(processes=min(config.max_workers, len(files))) as pool:
         pool.starmap(validate_file_schema, process_args)
 
     return expected_data_types
+
+def validate_columns(schema: dict[str, ColumnType], columns: tuple[str, ...], operation: str) -> None:
+    for column in columns:
+        if column not in schema:
+            raise ValueError(f"Invalid column '{column}' on operation '{operation}'")

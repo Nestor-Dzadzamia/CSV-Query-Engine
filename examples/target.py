@@ -28,8 +28,6 @@ if __name__ == "__main__":
             "user_session",
         )
         .filter("(brand == 'samsung') and (price < 200)")
-        .limit(10)
-        .sort("price")
-        .count()
+        .limit(100_000)
     )
     result.save("output.csv")

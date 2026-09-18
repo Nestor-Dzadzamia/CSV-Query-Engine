@@ -4,14 +4,13 @@ from multiprocessing import Pool, cpu_count
 from pathlib import Path
 from typing import cast
 
+from csvquery.config import PipelineConfig
 from csvquery.schema.inference import get_data_types
 from csvquery.schema.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
 
-CHUNK_SIZE = 1_000_000
 
-
-def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType]) -> None:
-    with open(file, newline="", encoding="utf-8-sig") as csv_file:
+def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType], config: PipelineConfig) -> None:
+    with open(file, newline="", encoding=config.encoding) as csv_file:
         headers = next(csv.reader(csv_file), None)
 
     if headers is None:
@@ -33,7 +32,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
             file,
             usecols=checked_columns,
             dtype={column: str for column in boolean_columns},
-            chunksize=CHUNK_SIZE,
+            chunksize=config.chunk_size,
             na_values=list(NULL_TYPES),
             keep_default_na=False,
             encoding="utf-8-sig",
@@ -69,12 +68,12 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType])
     except pd.errors.ParserError as error:
         raise ValueError(f"{file}: {error}") from None
 
-def validate_schema(files: list[Path]) -> dict[str, ColumnType]:
-    expected_data_types = get_data_types(files[0])
+def validate_schema(files: list[Path], config: PipelineConfig) -> dict[str, ColumnType]:
+    expected_data_types = get_data_types(files[0], config)
 
-    process_args = [(file, expected_data_types) for file in files]
+    process_args = [(file, expected_data_types, config) for file in files]
 
-    with Pool(processes=min(cpu_count(), len(files))) as pool:
+    with Pool(processes=min(config.max_workers, len(files))) as pool:
         pool.starmap(validate_file_schema, process_args)
 
     return expected_data_types

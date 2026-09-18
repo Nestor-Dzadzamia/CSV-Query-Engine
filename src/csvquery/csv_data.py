@@ -34,8 +34,15 @@ class CSVData:
         self._operations.append(Sort(*columns, descending=descending))
         return self
 
-    def limit(self, n: int) -> Self:
+    def limit(self, n: int) -> Self :
         self._operations.append(Limit(n))
+        return self
+
+    def group_by(self, group_col: str, agg_col: str, agg_func: str = "sum") -> Self:
+
+        from csvquery.operations.group_by import GroupBy
+
+        self._operations.append(GroupBy(group_col, agg_col, agg_func))
         return self
 
     def save(self, path: str) -> None:
@@ -49,3 +56,4 @@ class CSVData:
 
     def __iter__(self) -> Iterator[Row]:
         return self._execute()
+

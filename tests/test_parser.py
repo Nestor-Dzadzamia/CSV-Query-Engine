@@ -1,4 +1,5 @@
 import pytest
+from csvquery.util.errors import ExpressionError
 from csvquery.expression.parser import And, Comparison, Or, parse
 from csvquery.expression.tokenizer import TokenType
 
@@ -36,15 +37,15 @@ def test_chained_and_is_left_associative():
 
 
 def test_missing_value():
-    with pytest.raises(ValueError, match="expected a value"):
+    with pytest.raises(ExpressionError, match="expected a value"):
         parse("price >")
 
 
 def test_missing_close_paren():
-    with pytest.raises(ValueError, match="expected"):
+    with pytest.raises(ExpressionError, match="expected"):
         parse("(a > 1")
 
 
 def test_trailing_garbage():
-    with pytest.raises(ValueError, match="unexpected"):
+    with pytest.raises(ExpressionError, match="unexpected"):
         parse("a > 1 b")

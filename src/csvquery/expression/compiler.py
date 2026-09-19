@@ -7,6 +7,7 @@ from typing import Any
 from csvquery.expression.parser import And, Comparison, Node
 from csvquery.operations.types import cast
 from csvquery.schema.types import ColumnType, Row
+from csvquery.util.errors import ColumnError, ExpressionError
 
 Condition = Callable[[Row], bool]
 
@@ -34,7 +35,7 @@ def compile_expression(node: Node, schema: dict[str, ColumnType]) -> Condition:
 
 def _compile_comparison(node: Comparison, schema: dict[str, ColumnType]) -> Condition:
     if node.column not in schema:
-        raise ValueError(f"invalid column '{node.column}' on operation 'filter'")
+        raise ColumnError(f"invalid column '{node.column}' on operation 'filter'")
 
     column = node.column
     column_type = schema[column]
@@ -43,7 +44,7 @@ def _compile_comparison(node: Comparison, schema: dict[str, ColumnType]) -> Cond
     try:
         value = cast(node.value, column_type)
     except ValueError:
-        raise ValueError(
+        raise ExpressionError(
             f"can't compare column '{column}' ({column_type.value}) with '{node.value}'"
         ) from None
 

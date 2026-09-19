@@ -7,6 +7,7 @@ from typing import cast
 from csvquery.config import PipelineConfig
 from csvquery.schema.inference import get_data_types
 from csvquery.schema.types import BOOLEANS, NULL_TYPES, ColumnType, get_cell_type
+from csvquery.util.errors import ColumnError, SchemaError, SourceError
 
 
 def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType], config: PipelineConfig) -> None:
@@ -14,11 +15,11 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType],
         headers = next(csv.reader(csv_file), None)
 
     if headers is None:
-        raise ValueError(f"CSV file is empty {file}")
+        raise SourceError(f"CSV file is empty {file}")
 
     headers = [column.strip() for column in headers]
     if headers != list(expected_data_types):
-        raise ValueError(f"{file}: columns {headers} do not match {list(expected_data_types)}")
+        raise SchemaError(f"{file}: columns {headers} do not match {list(expected_data_types)}")
 
     # mxolod numeric columnebis validurobas vcheqav, string svetshi tu ricxvia magalitad 101 ganvixilav rogorc strigns
     numeric_columns = [column for column, data_type in expected_data_types.items() if data_type in (ColumnType.INTEGER, ColumnType.FLOAT, ColumnType.INTEGER)]
@@ -45,7 +46,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType],
                 if not pd.api.types.is_numeric_dtype(values):
                     for row, cell in values.items():
                         if get_cell_type(cell) is ColumnType.STRING:
-                            raise ValueError(
+                            raise SchemaError(
                                 f"{file} row {cast(int, row) + 1}: column {column} expected {expected_data_type.value} but got {cell}"
                             )
 
@@ -53,7 +54,7 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType],
                     bad = values % 1 != 0 # anu integers velodebit da float weria
                     if bad.any(): # tu romelime value truea
                         row = cast(int, bad.idxmax()) # pirveli trues indexi
-                        raise ValueError(
+                        raise SchemaError(
                             f"{file} row {row + 1}, column {column}: expected integer but got {values[row]}"
                         )
             for column in boolean_columns:
@@ -61,12 +62,12 @@ def validate_file_schema(file: Path, expected_data_types: dict[str, ColumnType],
                 bad = ~values.isin(BOOLEANS) # es ~ prosta flipavs anu not ivitaa
                 if bad.any():
                     row = cast(int,bad.idxmax())
-                    raise ValueError(
+                    raise SchemaError(
                         f"{file} row {row + 1}, column {column}: expected boolean got {values[row]}"
                     )
 
     except pd.errors.ParserError as error:
-        raise ValueError(f"{file}: {error}") from None
+        raise SchemaError(f"{file}: {error}") from None
 
 def validate_schema(files: list[Path], config: PipelineConfig) -> dict[str, ColumnType]:
     expected_data_types = get_data_types(files[0], config)
@@ -81,4 +82,4 @@ def validate_schema(files: list[Path], config: PipelineConfig) -> dict[str, Colu
 def validate_columns(schema: dict[str, ColumnType], columns: tuple[str, ...], operation: str) -> None:
     for column in columns:
         if column not in schema:
-            raise ValueError(f"Invalid column '{column}' on operation '{operation}'")
+            raise ColumnError(f"Invalid column '{column}' on operation '{operation}'")

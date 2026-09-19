@@ -3,6 +3,7 @@ from pathlib import Path
 
 from csvquery.config import PipelineConfig
 from csvquery.schema.types import ColumnType, get_cell_type
+from csvquery.util.errors import SourceError
 
 
 def get_data_types(file: Path, config: PipelineConfig) -> dict[str, ColumnType]:
@@ -10,7 +11,7 @@ def get_data_types(file: Path, config: PipelineConfig) -> dict[str, ColumnType]:
         records = csv.reader(csv_file)
         header = next(records, None)
         if header is None:
-            raise ValueError("CSV file is empty")
+            raise SourceError("CSV file is empty")
 
         header = [column.strip() for column in header]
         types: dict[str, ColumnType | None] = {  # napovni type ebistvis

@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from csvquery.operations.operation import Operation
 from csvquery.operations.types import cast
 from csvquery.schema.types import NULL_TYPES, ColumnType, Row
+from csvquery.util.errors import OperationError
 
 AGGREGATIONS = ("sum", "count", "avg", "min", "max")
 
@@ -13,9 +14,9 @@ class GroupBy(Operation):
     def __init__(self, group_col: str, agg_col: str, agg_func: str, schema: dict[str, ColumnType]) -> None:
         agg_func = agg_func.lower()
         if agg_func not in AGGREGATIONS:
-            raise ValueError(f"invalid aggregation '{agg_func}', expected one of {AGGREGATIONS}")
+            raise OperationError(f"invalid aggregation '{agg_func}', expected one of {AGGREGATIONS}")
         if agg_func != "count" and schema[agg_col] not in (ColumnType.INTEGER, ColumnType.FLOAT):
-            raise ValueError(f"can't {agg_func} column '{agg_col}' of type {schema[agg_col].value}")
+            raise OperationError(f"can't {agg_func} column '{agg_col}' of type {schema[agg_col].value}")
 
         self.group_col = group_col
         self.agg_col = agg_col

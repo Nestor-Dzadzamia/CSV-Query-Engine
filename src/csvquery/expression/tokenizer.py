@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 import re
+from csvquery.util.errors import ExpressionError
 
 class TokenType(Enum):
     COLUMN = "column"
@@ -43,7 +44,7 @@ def tokenize(expression: str) -> list[Token]:
     while position < len(expression):
         match = TOKEN_PATTERN.match(expression, position)
         if match is None:
-            raise ValueError(f"unexpected character {expression[position]!r} at position {position}")
+            raise ExpressionError(f"unexpected character {expression[position]!r} at position {position}")
 
         kind = match.lastgroup
         text = match.group()

@@ -1,5 +1,5 @@
-import logging
 from csvquery import CSVData
+import logging
 
 # result = (
 #     data
@@ -27,8 +27,8 @@ if __name__ == "__main__":
             "user_id",
             "user_session",
         )
+        .limit(1_000_000)
         .filter("(brand == 'samsung') and (price < 200)")
         .group_by("brand", "price", "avg")
-        .limit(100)
     )
     result.save("output.csv")

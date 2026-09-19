@@ -19,16 +19,11 @@ if __name__ == "__main__":
         data.select(
             "event_time",
             "event_type",
-            "product_id",
-            "category_id",
-            "category_code",
             "brand",
             "price",
             "user_id",
             "user_session",
         )
-        .limit(1_000_000)
         .filter("(brand == 'samsung') and (price < 200)")
-        .group_by("brand", "price", "avg")
     )
     result.save("output.csv")

@@ -11,3 +11,4 @@ def cast(cell: str, column_type: ColumnType) -> int | float | bool | str | None:
         case ColumnType.FLOAT: return float(cell)
         case ColumnType.BOOLEAN: return cell.strip().lower() == "true"
         case ColumnType.STRING: return cell
+        case _: return None

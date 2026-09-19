@@ -6,6 +6,7 @@ from csvquery.config import PipelineConfig
 from csvquery.io_handlers.writer import write_rows
 from csvquery.operations.count import Count
 from csvquery.operations.filter import Filter
+from csvquery.operations.group_by import GroupBy
 from csvquery.operations.limit import Limit
 from csvquery.operations.operation import Operation
 from csvquery.operations.select import Select
@@ -52,10 +53,9 @@ class CSVData:
         return self
 
     def group_by(self, group_col: str, agg_col: str, agg_func: str = "sum") -> Self:
+        validate_columns(self._schema, (group_col, agg_col), "group_by")
 
-        from csvquery.operations.group_by import GroupBy
-
-        self._operations.append(GroupBy(group_col, agg_col, agg_func))
+        self._operations.append(GroupBy(group_col, agg_col, agg_func, self._schema))
         return self
 
     @timed("query execution")

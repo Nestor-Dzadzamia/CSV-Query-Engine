@@ -1,30 +1,62 @@
-from typing import Iterator
+from __future__ import annotations
+
+from collections.abc import Iterator
+
 from csvquery.operations.operation import Operation
-from csvquery.types import Row
+from csvquery.operations.types import cast
+from csvquery.schema.types import NULL_TYPES, ColumnType, Row
+
+AGGREGATIONS = ("sum", "count", "avg", "min", "max")
+
 
 class GroupBy(Operation):
-    def __init__(self, group_col: str, agg_col: str, agg_func: str = "sum"):
+    def __init__(self, group_col: str, agg_col: str, agg_func: str, schema: dict[str, ColumnType]) -> None:
+        agg_func = agg_func.lower()
+        if agg_func not in AGGREGATIONS:
+            raise ValueError(f"invalid aggregation '{agg_func}', expected one of {AGGREGATIONS}")
+        if agg_func != "count" and schema[agg_col] not in (ColumnType.INTEGER, ColumnType.FLOAT):
+            raise ValueError(f"can't {agg_func} column '{agg_col}' of type {schema[agg_col].value}")
+
         self.group_col = group_col
         self.agg_col = agg_col
-        self.agg_func = agg_func.lower()
+        self.agg_func = agg_func
+        self._agg_type = schema[agg_col]
 
     def apply(self, rows: Iterator[Row]) -> Iterator[Row]:
-        aggregated_data: dict[str, float] = {}
+        totals: dict[str, float] = {}
+        counts: dict[str, int] = {}
 
         for row in rows:
-            group_val = str(row.get(self.group_col, "Unknown"))
-            try:
-                numeric_val = float(row.get(self.agg_col, 0))
-            except (ValueError, TypeError):
+            group = row[self.group_col]
+            raw = row[self.agg_col]
+
+            if group not in counts:
+                counts[group] = 0
+                totals[group] = 0.0
+
+            if raw in NULL_TYPES:
                 continue
 
-            if group_val not in aggregated_data:
-                aggregated_data[group_val] = 0.0
+            counts[group] += 1
+            if self.agg_func == "count":
+                continue
 
-            if self.agg_func == "sum":
-                aggregated_data[group_val] += numeric_val
-            elif self.agg_func == "count":
-                aggregated_data[group_val] += 1
+            value = cast(raw, self._agg_type)
+            assert isinstance(value, (int, float))
 
-        for group_val, agg_val in aggregated_data.items():
-            yield {self.group_col: group_val, self.agg_col: agg_val}
+            if self.agg_func in ("sum", "avg"):
+                totals[group] += value
+            elif self.agg_func == "min":
+                totals[group] = value if counts[group] == 1 else min(totals[group], value)
+            elif self.agg_func == "max":
+                totals[group] = value if counts[group] == 1 else max(totals[group], value)
+
+        result_name = f"{self.agg_func.upper()}({self.agg_col})"
+        for group in counts:
+            if self.agg_func == "count":
+                result: int | float = counts[group]
+            elif self.agg_func == "avg":
+                result = totals[group] / counts[group] if counts[group] else 0.0
+            else:
+                result = totals[group]
+            yield {self.group_col: group, result_name: str(result)}

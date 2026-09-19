@@ -16,10 +16,12 @@ from csvquery.io_handlers.reader import read_rows
 from csvquery.schema.files import retrieve_validate_files
 from csvquery.schema.validation import validate_schema, validate_columns
 from csvquery.schema.types import Row
+from csvquery.util.memory_usage import memory_usage
 from csvquery.util.timer import timed
 
 
 class CSVData:
+    @memory_usage("schema validation")
     @timed("schema validation")
     def __init__(self, path: str, config: PipelineConfig | None = None) -> None:
         self._config = PipelineConfig() if config is None else config
@@ -58,6 +60,7 @@ class CSVData:
         self._operations.append(GroupBy(group_col, agg_col, agg_func, self._schema))
         return self
 
+    @memory_usage("query execution")
     @timed("query execution")
     def save(self, path: str) -> None:
         rows = self._execute()

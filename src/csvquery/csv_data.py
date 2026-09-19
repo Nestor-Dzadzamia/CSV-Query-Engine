@@ -71,3 +71,13 @@ class CSVData:
 
     def __iter__(self) -> Iterator[Row]:
         return self._execute()
+
+    def __repr__(self) -> str:
+        operations = ", ".join(type(op).__name__ for op in self._operations)
+        return f"CSVData(files={len(self._files)}, operations=[{operations}])"
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._operations.clear()

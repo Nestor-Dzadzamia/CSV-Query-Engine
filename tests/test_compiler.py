@@ -1,4 +1,5 @@
 import pytest
+from csvquery.util.errors import ColumnError, ExpressionError
 from csvquery.expression.compiler import compile_expression
 from csvquery.expression.parser import parse
 from csvquery.schema.types import ColumnType
@@ -43,10 +44,10 @@ def test_null_never_matches():
 
 
 def test_unknown_column():
-    with pytest.raises(ValueError, match="invalid column"):
+    with pytest.raises(ColumnError, match="invalid column"):
         condition("nope > 1")
 
 
 def test_type_mismatch():
-    with pytest.raises(ValueError, match="can't compare"):
+    with pytest.raises(ExpressionError, match="can't compare"):
         condition("price > 'abc'")

@@ -1,4 +1,7 @@
+import pytest
+
 from csvquery.expression.tokenizer import TokenType, tokenize
+from csvquery.util.errors import ExpressionError
 
 
 def types(expression):
@@ -32,6 +35,5 @@ def test_negative_number():
 
 
 def test_bad_character():
-    import pytest
-    with pytest.raises(ValueError, match="position 4"):
+    with pytest.raises(ExpressionError, match="position 4"):
         tokenize("a > $")

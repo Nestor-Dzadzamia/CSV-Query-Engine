@@ -1,4 +1,5 @@
 from pathlib import Path
+from csvquery.util.errors import SourceError
 
 
 def retrieve_validate_files(path: str) -> list[Path]:
@@ -9,7 +10,7 @@ def retrieve_validate_files(path: str) -> list[Path]:
 
     if target.is_file():
         if target.suffix != ".csv":
-            raise ValueError(f"not a CSV file: {path!r}")
+            raise SourceError(f"not a CSV file: {path!r}")
         return [target]
 
     files = []
@@ -22,5 +23,5 @@ def retrieve_validate_files(path: str) -> list[Path]:
     files = sorted(files, key=lambda f: f.name) # aq vsortav, filesystemma sheileba aradeterministulad waikitxos
 
     if not files:
-        raise ValueError(f"the directory {path!r} contains no .csv files")
+        raise SourceError(f"the directory {path!r} contains no .csv files")
     return files

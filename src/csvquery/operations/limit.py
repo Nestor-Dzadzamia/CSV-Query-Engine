@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 from csvquery.operations.operation import Operation
-from csvquery.types import Row
+from csvquery.schema.types import Row
 
 
 class Limit(Operation):

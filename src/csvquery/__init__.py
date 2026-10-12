@@ -1,3 +1,9 @@
 from csvquery.csv_data import CSVData
-
-__all__ = ["CSVData"]
+from csvquery.util.errors import (
+    ColumnError,
+    CSVQueryError,
+    ExpressionError,
+    OperationError,
+    SchemaError,
+    SourceError,
+)

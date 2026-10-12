@@ -3,12 +3,14 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterator
 from pathlib import Path
-from csvquery.types import Row
+
+from csvquery.config import PipelineConfig
+from csvquery.schema.types import Row
 
 
-def read_rows(files: list[Path], header: list[str]) -> Iterator[Row]:
+def read_rows(files: list[Path], header: list[str], config: PipelineConfig) -> Iterator[Row]:
     for file_path in files:
-        with file_path.open(newline="", encoding="utf-8-sig") as csv_file:
+        with file_path.open(newline="", encoding=config.encoding) as csv_file:
             records = csv.reader(csv_file) # generatoria esec
             next(records, None) # header ar mchirdeba
 
